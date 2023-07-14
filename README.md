@@ -39,3 +39,7 @@ Contracts: contracts/step-3
 test: test/step-3
 
 ![image](images/step-3.png)
+
+
+## How to test it
+`npx hardhat test`
