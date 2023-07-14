@@ -41,5 +41,17 @@ test: test/step-3
 ![image](images/step-3.png)
 
 
+## Step 4 - [Paymaster](https://www.alchemy.com/blog/account-abstraction-paymasters)
+
+
+This implements "Account Abstraction Part 2: Sponsoring Transactions Using Paymasters"
+
+Contracts: contracts/step-4
+
+test: test/step-4
+
+![image](images/step-4.png)
+
+
 ## How to test it
 `npx hardhat test`
