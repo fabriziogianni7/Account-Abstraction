@@ -141,32 +141,4 @@ describe("step-2", () => {
     expect(depositForWallet).lessThan(ethers.parseEther(depositAmount)) //apparently the gasUsed returned by tx receipt is diffeerent than the one I get in sc with gasleft(). I added something to make this work but I'm not sure
 
   })
-
-
-  // it("test signature validation: owner send message with its signature", async () => {
-  //   const encoder = new TextEncoder();
-
-  //   const userOperation: UserOperation = {
-  //     data: "abcdefghilmnopqrstuvz",
-  //     to: accounts[1],
-  //     gas: 10000,
-  //     nonce: 1,
-  //     value: 0
-  //   }
-  //   const messageHash = solidityPackedKeccak256(
-  //     ["string", "string", "uint256", "uint256", "uint256"],
-  //     [userOperation.data, userOperation.to, userOperation.gas, userOperation.nonce, userOperation.value]
-  //   );
-
-  //   const signature = await owner.signMessage(messageHash);
-  //   userOperation.signature = signature
-  //   userOperation.data = encoder.encode("abcdefghilmnopqrstuvz"),
-
-  //     expect(signature).equals("0xc82ea7221f24cf9372bdbd9bd8f4fce1d3109b3074015a8119e5b631fa039d1916ab969aeb16187a4aca010f5be3feecaa9ed9bce6bf5235d6789389d93a9aed1c");
-
-  //   await wallet.executeOp(userOperation)
-
-  //   let nonce = await wallet.getNonce();
-  //   expect(nonce).equals(1);
-  // });
 });
