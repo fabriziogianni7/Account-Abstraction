@@ -18,13 +18,13 @@ contract EntryPointStepThree {
 
     function handleOps(UserOperation[] calldata ops) public {
         uint256 startGas = gasleft();
-        uint256 initialGasSpent= 30000000- startGas;
+        uint256 initialGasSpent = 30000000 - startGas;
         //for each op: validate all and make a list with all the succesfully vlidated ops
         //take this list and call execute ops an all of the ops
-        UserOperation[] memory validatedUserOps = new UserOperation[](
-            ops.length
-        );
+        uint256[] memory validatedUserOpsIndex = new uint256[](ops.length);
+
         address[] memory senders = new address[](ops.length);
+        uint256[] memory fundsToRemove = new uint256[](ops.length);
 
         uint256 gasPrice = tx.gasprice;
         uint256 totalGas;
@@ -36,6 +36,7 @@ contract EntryPointStepThree {
             uint256 depos = deposits[op.sender];
             uint256 missingAmount = 0;
             if (depos.add(walletBalance) < op.gasLimit) {
+                validatedUserOpsIndex[i] = 0;
                 continue;
             } else if (depos <= op.gasLimit) {
                 missingAmount = (op.gasLimit.sub(depos)).mul(gasPrice);
@@ -43,24 +44,25 @@ contract EntryPointStepThree {
 
             // call validateOp
             uint256 validationGas = wallet.validateOp(op, missingAmount);
-            validatedUserOps[i] = op;
+            validatedUserOpsIndex[i] = i;
             totalGas += validationGas;
         }
 
         //execute
-        for (uint256 i; i < validatedUserOps.length; i++) {
-            UserOperation memory op = validatedUserOps[i];
-            WalletStepThree wallet = WalletStepThree(payable(op.sender));
-            uint256 executionGas = wallet.executeOp(op);
-            validatedUserOps[i] = op;
-            totalGas += executionGas;
-            senders[i] = op.sender;
-            totalGasLimit += op.gasLimit;
+        for (uint256 i; i < validatedUserOpsIndex.length; i++) {
+            if (validatedUserOpsIndex[i] != 0) {
+                UserOperation memory op = ops[validatedUserOpsIndex[i]];
+                WalletStepThree wallet = WalletStepThree(payable(op.sender));
+                uint256 executionGas = wallet.executeOp(op);
+                totalGas += executionGas;
+                senders[i] = op.sender;
+                totalGasLimit += op.gasLimit;
+                fundsToRemove[i] = totalGas;
+            }
         }
-        uint256 finalGas = startGas +initialGasSpent - gasleft() + 21000 ;
-
-
-        _refundExecutor(finalGas.mul(gasPrice), senders); //change to accept array of wallets
+        uint256 finalGas = startGas + initialGasSpent - gasleft() + 14900; // just a base fee................
+        console.log(finalGas);
+        _refundExecutor(finalGas.mul(gasPrice), senders, fundsToRemove); //change to accept array of wallets
     }
 
     function deposit(address wallet) public payable {
@@ -86,7 +88,8 @@ contract EntryPointStepThree {
 
     function _refundExecutor(
         uint256 amountToRefund,
-        address[] memory wallets
+        address[] memory wallets,
+        uint256[] memory fundsToRemove
     ) internal virtual {
         if (amountToRefund != 0) {
             (bool success, ) = payable(msg.sender).call{value: amountToRefund}(
@@ -95,7 +98,7 @@ contract EntryPointStepThree {
             require(success, "Transfer to bundler failed");
             for (uint256 i; i < wallets.length; i++) {
                 address wallet = wallets[i];
-                // deposits[wallet] -= amountToRefund;
+                deposits[wallet] -= fundsToRemove[i];
             }
         }
     }
