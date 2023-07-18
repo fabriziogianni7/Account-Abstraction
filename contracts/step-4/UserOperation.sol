@@ -5,10 +5,11 @@ struct UserOperation {
     address sender;
     address to;
     bytes data;
-    uint256 value; 
+    uint256 value;
     uint256 gasLimit;
-    uint256 maxPriorityFeePerGas;
-    uint256 gasPrice;
-    uint256 nonce;
     bytes signature;
+    uint256 nonce;
+    uint256 maxPriorityFeePerGas;
+    address paymaster;
+    bytes paymasterData;
 }

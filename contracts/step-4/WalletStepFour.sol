@@ -7,14 +7,12 @@ this if from "Goal: No separate EOA" to "Simulation redux"
 */
 
 import "./UserOperation.sol";
-import "./EntryPointStepThree.sol";
+import "./EntryPointStepFour.sol";
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
-import "hardhat/console.sol";
-
-contract WalletStepThree {
+contract WalletStepFour {
     using ECDSA for bytes32;
     using SafeMath for uint256;
 
@@ -36,8 +34,6 @@ contract WalletStepThree {
         _;
     }
 
-
-    //**@notice how should the funcrtioon be restricted? */
     function getNonce() public view returns (uint256) {
         return nonce;
     }
@@ -55,8 +51,6 @@ contract WalletStepThree {
         uint256 startGas = gasleft();
         bytes32 userOpHash = _getHash(userOp);
         bool isSignatureValid = _validateSignature(userOp, userOpHash);
-        bool isNonceValid = _validateNonce(userOp.nonce);
-        require(isNonceValid && isSignatureValid, "nonce or signature are not valid");
         //TODO send necessay funds for execution otherwise revert
         emit Validation(isSignatureValid);
         if (missingAmount > 0) {
@@ -71,6 +65,7 @@ contract WalletStepThree {
     ) public onlyEntryPoint returns (uint256) {
         //should make the request in the userOp calling basically eth_sendTransaction
         uint256 startGas = gasleft();
+
         _call(userOp.to, userOp.value, userOp.data);
         nonce.add(1);
         emit OpExecuted(address(this));
@@ -95,11 +90,7 @@ contract WalletStepThree {
         uint256 value,
         bytes memory data
     ) internal returns (bool) {
-        console.log(value);
-        (bool success, bytes memory result) = target.call{value: value}(data);
-        console.log("success:", success);
-
-        return success;
+        return true;
     }
 
     function _getHash(
@@ -120,19 +111,13 @@ contract WalletStepThree {
     function _fundEntryPoint(uint256 amount) internal {
         require(address(this).balance > amount, "missing funds");
         // console.log("amount", amount);
-        EntryPointStepThree(entryPoint).deposit{value: amount}(address(this));
-    }
-
-    function _validateNonce(uint256 opNonce) internal view returns (bool) {
-        bool isValid = opNonce - nonce == 1;
-        return isValid;
+        EntryPointStepFour(entryPoint).deposit{value: amount}(address(this));
     }
 
     function getFundBack() public {
         require(msg.sender == owner, "not authorized to make this call");
-        EntryPointStepThree(entryPoint).withdrawTo(payable(address(this)));
+        EntryPointStepFour(entryPoint).withdrawTo(payable(address(this)));
     }
-
     //fallback
     receive() external payable {
         emit Received(msg.sender, msg.value);

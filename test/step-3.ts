@@ -6,7 +6,7 @@ type UserOperation = {
   sender: string
   to: string
   data: Uint8Array | string
-  value: number
+  value: bigint | number | string
   gasLimit: number
   nonce?: number
   gasPrice?: number
@@ -32,7 +32,6 @@ describe("step-3", () => {
 
     // Deploy the contract with an owner address
     accounts = await ethers.getSigners();
-    // console.log(await provider.getBalance(accounts[0].address))
 
     const EntryPointFactory = await ethers.getContractFactory("EntryPointStepThree");
     entryPoint = await EntryPointFactory.deploy();
@@ -90,8 +89,6 @@ describe("step-3", () => {
     const sendtx2 = await owner2.sendTransaction(fundWalletTx2)
     await sendtx2.wait()
     const walletBalance2 = await provider.getBalance(walletAddress2)
-    console.log("walletBalance2", walletBalance2)
-    console.log("walletBalance", walletBalance)
     expect(walletBalance).equals(ethers.parseEther(depositAmount))
     expect(walletBalance2).equals(ethers.parseEther(depositAmount))
 
@@ -154,25 +151,85 @@ describe("step-3", () => {
     const tx = await executorToEntryPoint.handleOps([userOperation1, userOperation2], {
     })
     const rec = await tx.wait();
-    console.log("rec.gasUsed",rec.gasUsed)
-
-
-
-
-    const executorBalanceAfterTransaction = await provider.getBalance(executor.address)
-
-
-    // // executor get refunded from the entryPoint here the balance of executor 
-    // //i'm spending more gas, not sure why!!
-    // //apparently the gasUsed returned by tx receipt is diffeerent than the one I get in sc with gasleft(). I added something to make this work but it's wrong so far
-    expect(executorBalanceAfterTransaction).greaterThanOrEqual(executorBalanceBeforeTransaction)
-    console.log("executorBalanceBeforeTransaction",executorBalanceBeforeTransaction)
-    console.log("executorBalanceAfterTransaction",executorBalanceAfterTransaction)
-
-    // const depositForWallet = await entryPoint.getDepositForWallet(wallet)
-    // expect(depositForWallet).lessThan(ethers.parseEther(depositAmount)) //apparently the gasUsed returned by tx receipt is diffeerent than the one I get in sc with gasleft(). I added something to make this work but I'm not sure
 
   })
+  it(`Owner Should transfer ETH to another account using the smart wallet`, async () => {
+
+    //depositing funds into walllet1
+    const depositAmount = '0.1'
+    const fundWalletTx = {
+      to: walletAddress,
+      value: ethers.parseEther(depositAmount),
+    };
+
+    const sendtx = await owner.sendTransaction(fundWalletTx)
+    await sendtx.wait()
+    const walletBalance = await provider.getBalance(walletAddress)
+     console.log("walletBalanc",walletBalance ) 
+
+
+
+    const executor = accounts[3]
+    const receiver = accounts[1]
+    const receiverBalanceBeforeTransaction = await provider.getBalance(receiver.address)
+
+
+    const executorToEntryPoint = entryPoint.connect(executor);
+
+    // // owner builds the transaction
+    const encoder = new TextEncoder();
+
+    const userOperation1: UserOperation = {
+      sender: walletAddress,
+      to: accounts[1],
+      data: "abcdefghilmnopqrstuvz",
+      value: "100000",
+      gasLimit: 30000000,
+      maxPriorityFeePerGas: 1429654332,
+      gasPrice: 1188103197,
+      nonce: 1,
+    }
+    console.log("userOperation1.value", userOperation1.value)
+
+
+    const messageHash1 = solidityPackedKeccak256(
+      ["string", //sender
+        "string", //to
+        "string", //data
+        "uint256", // value
+        "uint256", //gasLimit
+        "uint256", // maxPriorityFeePerGas
+        "uint256", //nonce
+        ],
+      [
+        userOperation1.sender,
+        userOperation1.to,
+        userOperation1.data,
+        userOperation1.value,
+        userOperation1.gasLimit,
+        userOperation1.maxPriorityFeePerGas,
+        userOperation1.nonce
+      ]
+    );
+
+    const signature1 = await owner.signMessage(messageHash1);
+    userOperation1.signature = signature1
+    userOperation1.data = encoder.encode("abcdefghilmnopqrstuvz")
+
+
+    const tx = await executorToEntryPoint.handleOps([userOperation1], {
+    })
+    const rec = await tx.wait();
+
+    const receiverBalanceAfterTransaction = await provider.getBalance(receiver.address)
+    expect(receiverBalanceAfterTransaction).greaterThan(receiverBalanceBeforeTransaction)
+
+
+
+  })
+
+
+
 
 
 });
